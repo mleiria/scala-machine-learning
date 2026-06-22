@@ -1,0 +1,12 @@
+target/
+project/target/
+.bsp/
+.idea/
+*.ipr
+*.iws
+*.iml
+.DS_Store
+Thumbs.db
+.env
+*.log
+.claude/
