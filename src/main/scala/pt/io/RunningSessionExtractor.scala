@@ -1,9 +1,8 @@
 package pt.io
 
-import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.{Dataset, Encoders, SparkSession}
 import pt.models.SamsungHealthModels.Exercise
+
 import java.nio.file.{Files, Paths}
 
 /**
