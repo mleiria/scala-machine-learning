@@ -10,5 +10,6 @@ object RunningSessionsMain extends App {
   val dataDir = "/home/manuel/Downloads/Databases/samsunghealth_manuel.leiria_20250930125884"
 
   val runningSessions = RunningSessionExtractor.extractRunningSessions(spark, dataDir)
+  runningSessions.printSchema()
   runningSessions.show()
 }
