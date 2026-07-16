@@ -1,7 +1,7 @@
 package pt.mleiria
 
 import breeze.linalg.{DenseMatrix, DenseVector}
-import org.apache.spark.sql.SparkSession
+
 import pt.mleiria.core.GradientDescent
 import pt.mleiria.core.GradientDescent.OptimizationResult
 import pt.mleiria.dto.PlotDto
@@ -10,7 +10,7 @@ import pt.mleiria.utils.{DateUtils, PlotUtils}
 object Main {
 
   def main(args: Array[String]): Unit = {
-    //linearReg()
+    linearReg()
     linearRegMulti()
   }
 
@@ -39,7 +39,8 @@ object Main {
     val numIters = 500
     val tmpAlpha = 1.0e-2
     val hyperparameters = GradientDescent.Hyperparameters(tmpAlpha, numIters)
-    val xTrain = DenseMatrix(1.0, 2.0)
+    // Changed to a column matrix for a single feature with multiple samples
+    val xTrain = DenseMatrix((1.0), (2.0))
 
     val yTrain = DenseVector(300.0, 500.0)
     val trainData = GradientDescent.TrainingSet(xTrain, yTrain)

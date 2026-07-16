@@ -3,7 +3,13 @@ ThisBuild / scalaVersion := "2.12.18"
 lazy val root = (project in file("."))
   .settings(
     name := "scala-machine-learning",
-    version := "0.1.1",
+    version := "0.1.22",
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-feature",
+      "-unchecked",
+      "-Xlint"
+    ),
     javaOptions ++= Seq(
       "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",

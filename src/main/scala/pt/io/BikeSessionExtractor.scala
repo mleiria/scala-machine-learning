@@ -1,9 +1,10 @@
 package pt.io
 
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.Encoders
+import pt.mleiria.utils.FilterUtils
 import pt.models.SamsungHealthModels.Exercise
+
 import java.nio.file.{Files, Paths}
 
 /**
@@ -11,32 +12,22 @@ import java.nio.file.{Files, Paths}
  */
 object BikeSessionExtractor {
 
-  private val BIKE_EXERCISE_TYPES = Set(1002, 11007)
+  private val BIKE_EXERCISE_TYPES = Set(1002, 11007, 13004, 15003)
 
   /**
-    * Extracts all bike sessions from the provided Samsung Health data directory.
-    *
-    * @param spark The SparkSession to use for reading and filtering.
-    * @param dataDir The absolute path to the Samsung Health data export folder.
-    * @return A Dataset of Exercise objects filtered for bike sessions.
-    */
+   * Extracts all bike sessions from the provided Samsung Health data directory.
+   *
+   * @param spark   The SparkSession to use for reading and filtering.
+   * @param dataDir The absolute path to the Samsung Health data export folder.
+   * @return A Dataset of Exercise objects filtered for bike sessions.
+   */
   def extractBikeSessions(spark: SparkSession, dataDir: String): Dataset[Exercise] = {
     import spark.implicits._
 
     // 1. Find the exercise CSV file in the csv directory
     val csvDir = s"$dataDir/csv"
     val exerciseFile = Files.list(Paths.get(csvDir))
-      .filter { p => p.getFileName.toString.contains("com.samsung.shealth.exercise") &&
-                     p.getFileName.toString.endsWith(".csv") &&
-                     !p.getFileName.toString.contains("custom_exercise") &&
-                     !p.getFileName.toString.contains("hr_zone") &&
-                     !p.getFileName.toString.contains("max_heart_rate") &&
-                     !p.getFileName.toString.contains("pacesetter") &&
-                     !p.getFileName.toString.contains("periodization") &&
-                     !p.getFileName.toString.contains("recovery_heart_rate") &&
-                     !p.getFileName.toString.contains("route") &&
-                     !p.getFileName.toString.contains("weather")
-                   }
+      .filter(p =>  FilterUtils.exercisePathFilter(p))
       .findFirst()
       .orElseThrow(() => new RuntimeException(s"Exercise CSV file not found in $csvDir"))
       .toString

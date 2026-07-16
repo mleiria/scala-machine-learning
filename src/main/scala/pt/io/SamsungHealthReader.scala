@@ -1,6 +1,6 @@
 package pt.io
 
-import org.apache.spark.sql.{Dataset, SparkSession, DataFrame}
+import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.functions.{col, trim, from_csv}
 import org.apache.spark.sql.Encoders
 import pt.models.SamsungHealthModels._

@@ -1,7 +1,7 @@
 package pt
 
 import org.apache.spark.sql.SparkSession
-import pt.io.{BikeSessionExtractor, RunningSessionExtractor}
+import pt.io.BikeSessionExtractor
 
 object BikeSessionMain extends App {
   val spark = SparkSession.builder().appName("BikeDataExtraction").master("local[*]").getOrCreate()

@@ -1,24 +1,66 @@
 package pt.mleiria.utils
 
-import breeze.linalg.DenseMatrix
+import breeze.linalg.{DenseMatrix, DenseVector}
+import breeze.numerics.exp
 
 object NormalizeUtils {
 
-  def zScoreNormalization(data: DenseMatrix[Double]): DenseMatrix[Double] = {
-    val m = data.rows
-    val n = data.cols
-    val normalizedData = DenseMatrix.zeros[Double](m, n)
+  // Function to get stats (run once on training data)
+  def getStats(data: DenseMatrix[Double]): (DenseVector[Double], DenseVector[Double]) = {
+    val rows = data.rows
+    val rowsD = rows.toDouble
 
-    for (j <- 0 until n) {
-      val col = data(::, j)
-      val mu = breeze.stats.mean(col)
-      val sigma = breeze.stats.stddev(col)
+    // Column-wise mean: (data.T * ones(rows)) / rows
+    val colSums = data.t * DenseVector.ones[Double](rows)
+    val mu = colSums / rowsD
 
-      for (i <- 0 until m) {
-        normalizedData(i, j) = (data(i, j) - mu) / sigma
-      }
-    }
-    normalizedData
+    // Column-wise standard deviation:
+    val muMatrix = DenseMatrix.ones[Double](rows, 1) * mu.t
+    val centered = data - muMatrix
+
+    // Compute sum of squares for each column using the transpose and a sum vector
+    val centeredSq = centered.map(x => x * x)
+    val sumSq = centeredSq.t * DenseVector.ones[Double](rows)
+
+    // Use Bessel's correction (n-1) for sample standard deviation
+    val sigma = (sumSq / (rowsD - 1.0)).map(Math.sqrt)
+
+    (mu, sigma)
   }
 
+  // Function to apply existing stats (run on both training and test data)
+  def applyNormalization(data: DenseMatrix[Double], mu: DenseVector[Double], sigma: DenseVector[Double]): DenseMatrix[Double] = {
+    val epsilon = 1e-8
+    val safeSigma = sigma + epsilon
+
+    // Vectorized normalization using outer products to broadcast vectors to matrices
+    val muMatrix = DenseMatrix.ones[Double](data.rows, 1) * mu.t
+    val sigmaMatrix = DenseMatrix.ones[Double](data.rows, 1) * safeSigma.t
+
+    (data - muMatrix) / sigmaMatrix
+  }
+
+  /**
+   * Computes the sigmoid of z.
+   * Supports both scalar (Double) and vector (DenseVector) inputs.
+   */
+  def sigmoid(z: Double): Double = {
+    1.0 / (1.0 + Math.exp(-z))
+  }
+
+  def sigmoid(z: DenseVector[Double]): DenseVector[Double] = {
+    1.0 / (exp(-z) + 1.0)
+  }
+
+  /**
+   * Computes the hyperbolic tangent (tanh) of z.
+   * Supports both scalar (Double) and vector (DenseVector) inputs.
+   */
+  def tanh(z: Double): Double = {
+    Math.tanh(z)
+  }
+
+  def tanh(z: DenseVector[Double]): DenseVector[Double] = {
+    z.map(Math.tanh)
+  }
 }

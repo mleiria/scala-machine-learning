@@ -1,12 +1,11 @@
 package pt.mleiria.utils
 
 import java.io.{File, PrintWriter}
-import java.nio.file.{Files, Paths}
 import scala.io.Source
 
 object IOUtils {
 
-  private def getSource(fileName: String, encoding: String = "UTF-8") = Source.fromFile(fileName, encoding)
+  private def getSource(fileName: String, encoding: String) = Source.fromFile(fileName, encoding)
 
   /**
    * Read a file to an Array[String]
@@ -81,6 +80,23 @@ object IOUtils {
       d.listFiles.filter(_.isFile).toList
     } else {
       List[File]()
+    }
+  }
+
+  /**
+   * Loads data from a file.
+   *
+   * @param inputPath The path to the input file.
+   * @return A tuple containing the header and the data lines.
+   */
+  def getDataFromFile(inputPath: String): (String, Array[String]) = {
+    println(s"Loading data from $inputPath...")
+    val lines = readFileToArray(inputPath)
+    if (lines.isEmpty) {
+      println("File is empty.")
+      ("", Array.empty[String])
+    } else {
+      (lines(0), lines.drop(1))
     }
   }
 

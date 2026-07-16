@@ -3,6 +3,7 @@ package pt
 import org.apache.spark.sql.SparkSession
 import pt.models.SamsungHealthModels.Exercise
 import org.apache.spark.sql.Encoders
+import pt.mleiria.utils.FilterUtils
 
 object IdentifyExercises extends App {
   val spark = SparkSession.builder().appName("IdentifyExercises").master("local[*]").getOrCreate()
@@ -13,17 +14,7 @@ object IdentifyExercises extends App {
   
   import java.nio.file.{Files, Paths}
   val exerciseFile = Files.list(Paths.get(csvDir))
-    .filter { p => p.getFileName.toString.contains("com.samsung.shealth.exercise") &&
-                   p.getFileName.toString.endsWith(".csv") &&
-                   !p.getFileName.toString.contains("custom_exercise") &&
-                   !p.getFileName.toString.contains("hr_zone") &&
-                   !p.getFileName.toString.contains("max_heart_rate") &&
-                   !p.getFileName.toString.contains("pacesetter") &&
-                   !p.getFileName.toString.contains("periodization") &&
-                   !p.getFileName.toString.contains("recovery_heart_rate") &&
-                   !p.getFileName.toString.contains("route") &&
-                   !p.getFileName.toString.contains("weather")
-                 }
+    .filter(p =>  FilterUtils.exercisePathFilter(p))
     .findFirst()
     .orElseThrow(() => new RuntimeException("Exercise file not found"))
     .toString

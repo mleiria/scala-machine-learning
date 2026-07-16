@@ -2,14 +2,14 @@ package pt
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.desc
-import pt.io.RunningSessionExtractor
+import pt.io.RunningSessionExtractorHadoop
 
-object RunningSessionsMain extends App {
+object RunningSessionsMainHadoop extends App {
   val spark = SparkSession.builder().appName("RunningDataExtraction").master("local[*]").getOrCreate()
 
-  // Local file system
-  val dataDir = "/home/manuel/Downloads/Databases/samsunghealth_manuel.leiria_20260625153006"
-  val runningSessions = RunningSessionExtractor.extractRunningSessions(spark, dataDir)
+  // Hadoop file system
+  val dataDirHadoop = "hdfs://manuel-hs:9000/user/manuel/samsung_health"
+  val runningSessions = RunningSessionExtractorHadoop.extractRunningSessions(spark, dataDirHadoop)
   println("COUNT:" + runningSessions.count())
 
   //runningSessions.printSchema()
