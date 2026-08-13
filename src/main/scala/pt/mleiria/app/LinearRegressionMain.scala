@@ -7,7 +7,7 @@ import pt.mleiria.core.GradientDescent.OptimizationResult
 import pt.mleiria.dto.PlotDto
 import pt.mleiria.utils.{DateUtils, PlotUtils}
 
-object Main {
+object LinearRegressionMain {
 
   def main(args: Array[String]): Unit = {
     linearReg()

@@ -3,7 +3,7 @@ ThisBuild / scalaVersion := "2.12.18"
 lazy val root = (project in file("."))
   .settings(
     name := "scala-machine-learning",
-    version := "0.1.22",
+    version := "0.2.00",
     scalacOptions ++= Seq(
       "-deprecation",
       "-feature",
@@ -11,6 +11,7 @@ lazy val root = (project in file("."))
       "-Xlint"
     ),
     javaOptions ++= Seq(
+      "--add-modules", "jdk.incubator.vector",
       "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
       "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -39,5 +40,8 @@ libraryDependencies ++= Seq(
   "org.mongodb" % "mongo-java-driver" % "2.10.1",
   "io.github.cibotech" %% "evilplot" % "0.9.0",
   "org.apache.spark" %% "spark-core" % sparkVersion,
-  "org.apache.spark" %% "spark-sql"  % sparkVersion
+  "org.apache.spark" %% "spark-sql"  % sparkVersion,
+  "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-M2.1",
+  "org.nd4j" % "nd4j-native-platform" % "1.0.0-M2.1",
+  "org.slf4j" % "slf4j-simple" % "1.7.36" // For logging output
 )
