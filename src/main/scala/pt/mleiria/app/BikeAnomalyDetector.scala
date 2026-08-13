@@ -16,9 +16,38 @@ object BikeAnomalyDetector {
     println(s"Header: ${headerData.mkString("Array(", ", ", ")")}")
 
     val matrix = Converter.strArrayToBreeze(data, dropFirstCol = true)
-    val colToRemove = headerData.find(p => p._1 == ActivityMetric.MeanHeartRate.toString).get.  _2 - 1
-    val yRaw = matrix(::, colToRemove).copy
-    val xRaw = matrix(::, (0 until matrix.cols).filter(_ != colToRemove)).toDenseMatrix
+    val colToRemove = headerData.find(p => p._1 == ActivityMetric.MeanHeartRate.toString).get._2 - 1
+
+    val xRawAll = matrix(::, (0 until matrix.cols).filter(_ != colToRemove)).toDenseMatrix
+    val yRawAll = matrix(::, colToRemove).copy
+
+    // Impute NaNs in xRawAll with column medians
+    val xImputed = new DenseMatrix[Double](xRawAll.rows, xRawAll.cols)
+    for (j <- 0 until xRawAll.cols) {
+      val col = xRawAll(::, j)
+      val median = NormalizeUtils.calculateMedian(DenseVector(col.toArray.filterNot(_.isNaN)))
+      for (i <- 0 until xRawAll.rows) {
+        val value = xRawAll(i, j)
+        xImputed(i, j) = if (value.isNaN) median else value
+      }
+    }
+
+    // Filter out rows where yRawAll is NaN (target must be present)
+    val validIndices = (0 until yRawAll.length).filter { i =>
+      !yRawAll(i).isNaN
+    }
+
+    if (validIndices.isEmpty) {
+      throw new RuntimeException("No valid data rows found (all target values are NaNs)")
+    }
+
+    val xRaw = DenseMatrix.tabulate(validIndices.length, xImputed.cols) { (i, j) =>
+      xImputed(validIndices(i), j)
+    }
+    val yRaw = DenseVector.tabulate(validIndices.length) { i =>
+      yRawAll(validIndices(i))
+    }
+
     val stats = NormalizeUtils.getStats(xRaw)
     val xNorm = NormalizeUtils.applyNormalization(xRaw, stats._1, stats._2)
 
@@ -79,8 +108,14 @@ object BikeAnomalyDetector {
 
     // --- Phase 1: Robust Weight Estimation (Trimmed Least Squares) ---
     // 1. Initial fit to get a baseline
+    println(s"X_norm shape: ${X_norm.rows}x${X_norm.cols}")
+    println(s"y_raw shape: ${y_raw.length}")
+    println(s"X_norm contains NaN: ${X_norm.toArray.exists(_.isNaN)}")
+    println(s"y_raw contains NaN: ${y_raw.toArray.exists(_.isNaN)}")
     val wInitial = X_norm \ y_raw
     val residualsInitial = abs(y_raw - (X_norm * wInitial))
+    println(s"Initial residuals: ${residualsInitial.toArray.take(5).mkString(", ")} ... length: ${residualsInitial.length}")
+
 
     // 2. Identify a "clean" subset (ignore top 5% most extreme residuals)
     val sortedResiduals = residualsInitial.toArray.sorted
