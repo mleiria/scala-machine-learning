@@ -25,17 +25,19 @@ case class RandomForest(trees: List[DecisionTree], config: RFConfig, criterion: 
   /**
    * Predicts target values for the given input matrix.
    *
-   * For each sample, it collects predictions from all trees and aggregates them using
-   * the provided split criterion (e.g., majority vote for classification, average for regression).
+   * For each sample in the matrix, the forest collects predictions from all individual
+   * decision trees. These predictions are then aggregated using the split criterion:
+   * - For classification: The majority vote (mode) is chosen.
+   * - For regression: The average (mean) is computed.
    *
-   * @param x Feature matrix.
-   * @return Vector of predictions.
+   * @param x Feature matrix where each row is a sample to be predicted.
+   * @return A [[DenseVector]] containing the aggregated predictions for each sample.
    */
   def predict(x: DenseMatrix[Double]): DenseVector[Double] = {
     val nSamples = x.rows
 
     DenseVector.tabulate(nSamples) { i =>
-      val sample = DenseVector.tabulate(x.cols)(j => x(i, j))
+      val sample = x(i, ::).t
       val treePredictions = trees.map(_.predict(sample))
       criterion.aggregate(treePredictions)
     }
@@ -50,13 +52,17 @@ object RandomForest {
   /**
    * Trains the Random Forest model.
    *
-   * This method trains `numTrees` decision trees in parallel using a thread pool.
-   * Each tree is trained on a bootstrap sample of the original training data.
+   * This method implements the Random Forest algorithm by training multiple decision trees
+   * in parallel. To ensure diversity among the trees, it uses Bagging (Bootstrap Aggregating),
+   * where each tree is trained on a random sample of the original data drawn with replacement.
    *
-   * @param config The configuration for the forest.
-   * @param x Feature matrix.
-   * @param y Target vector.
-   * @return A trained RandomForest instance.
+   * Performance Optimization: This implementation uses zero-copy bagging by passing bootstrap
+   * indices to the Decision Tree training process rather than copying the feature matrix.
+   *
+   * @param config The configuration for the forest, including the number of trees and tree-specific settings.
+   * @param x      The feature matrix.
+   * @param y      The target vector.
+   * @return A trained [[RandomForest]] instance.
    */
   def fit(config: RFConfig, x: DenseMatrix[Double], y: DenseVector[Double]): RandomForest = {
     val criterion = SplitCriteriaFactory.get(config.criterion)
@@ -70,18 +76,9 @@ object RandomForest {
     try {
       val treeFutures = (1 to config.numTrees).map { _ =>
         Future {
-          // Bagging: Bootstrap sample of the training data
           val random = new Random()
-          val bootstrapIndices = (0 until nSamples).map(_ => random.nextInt(nSamples))
-
-          val bootX = DenseMatrix.tabulate(nSamples, nFeatures) { (i, j) =>
-            x(bootstrapIndices(i), j)
-          }
-          val bootY = DenseVector.tabulate(nSamples) { i =>
-            y(bootstrapIndices(i))
-          }
-
-          DecisionTree.fit(config.treeConfig, criterion, bootX, bootY, random)
+          val bootstrapIndices = Array.fill(nSamples)(random.nextInt(nSamples))
+          DecisionTree.fit(config.treeConfig, criterion, x, y, bootstrapIndices, random)
         }
       }
 

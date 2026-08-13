@@ -19,7 +19,7 @@ case class LeafNode(value: Double) extends Node
  * @param leftIndices Indices of samples that go to the left child.
  * @param rightIndices Indices of samples that go to the right child.
  */
-case class Split(gain: Double, featureIdx: Int, threshold: Double, leftIndices: List[Int], rightIndices: List[Int])
+case class Split(gain: Double, featureIdx: Int, threshold: Double, leftIndices: Array[Int], rightIndices: Array[Int])
 
 /**
  * Implementation of a Decision Tree for Classification and Regression.
@@ -34,10 +34,11 @@ case class Split(gain: Double, featureIdx: Int, threshold: Double, leftIndices: 
 case class DecisionTree(root: Node, config: TreeConfig, criterion: SplitCriteria) {
 
   /**
-   * Predicts the target value for a given input sample.
+   * Predicts the target value for a given input sample by traversing the tree
+   * from the root to a leaf node.
    *
    * @param x The feature vector for which to predict.
-   * @return The predicted target value.
+   * @return The predicted target value (mode for classification, mean for regression).
    */
   def predict(x: DenseVector[Double]): Double = {
     def traverse(node: Node): Double = node match {
@@ -55,17 +56,36 @@ case class DecisionTree(root: Node, config: TreeConfig, criterion: SplitCriteria
 object DecisionTree {
 
   /**
-   * Trains a Decision Tree model.
+   * Trains a Decision Tree model using the full provided feature matrix.
    *
-   * @param config The configuration parameters for the tree.
-   * @param criterion The impurity measure to use for splitting.
-   * @param x The feature matrix.
-   * @param y The target vector.
-   * @param random Random instance for feature sampling (optional).
-   * @return A trained DecisionTree instance.
+   * @param config   The configuration parameters for the tree (max depth, min samples per leaf, etc.).
+   * @param criterion The impurity measure to use for splitting (e.g., Gini, Entropy, MSE).
+   * @param x        The feature matrix where each row is a sample.
+   * @param y        The target vector.
+   * @param random   Random instance for feature sampling, used for Random Forest diversity.
+   * @return A trained [[DecisionTree]] instance.
    */
   def fit(config: TreeConfig, criterion: SplitCriteria, x: DenseMatrix[Double], y: DenseVector[Double], random: Random = new Random()): DecisionTree = {
-    val indices = (0 until x.rows).toList
+    val indices = (0 until x.rows).toArray
+    val rootNode = buildTree(x, y, indices, 0, config, criterion, random)
+    DecisionTree(rootNode, config, criterion)
+  }
+
+  /**
+   * Trains a Decision Tree model using a specific subset of the provided feature matrix.
+   *
+   * This overload is used by [[RandomForest]] to implement bagging (bootstrap aggregating)
+   * without copying the underlying data matrices.
+   *
+   * @param config   The configuration parameters for the tree.
+   * @param criterion The impurity measure to use for splitting.
+   * @param x        The feature matrix.
+   * @param y        The target vector.
+   * @param indices  An array of indices representing the bootstrap sample.
+   * @param random   Random instance for feature sampling.
+   * @return A trained [[DecisionTree]] instance.
+   */
+  def fit(config: TreeConfig, criterion: SplitCriteria, x: DenseMatrix[Double], y: DenseVector[Double], indices: Array[Int], random: Random): DecisionTree = {
     val rootNode = buildTree(x, y, indices, 0, config, criterion, random)
     DecisionTree(rootNode, config, criterion)
   }
@@ -73,7 +93,7 @@ object DecisionTree {
   private def buildTree(
     x: DenseMatrix[Double],
     y: DenseVector[Double],
-    indices: List[Int],
+    indices: Array[Int],
     depth: Int,
     config: TreeConfig,
     criterion: SplitCriteria,
@@ -84,32 +104,34 @@ object DecisionTree {
     val numFeatures = x.cols
 
     // Base cases: max depth, min samples, or pure node
-    if (depth >= config.maxDepth || numSamples <= config.minSamplesPerLeaf || labels.distinct.size <= 1) {
+    if (depth >= config.maxDepth || numSamples <= config.minSamplesPerLeaf || (numSamples > 0 && labels.forall(_ == labels(0)))) {
       LeafNode(criterion.calculateLeafValue(labels))
     } else {
       val currentImpurity = criterion.computeImpurity(labels)
       val sampledFeatures = sampleFeatures(numFeatures, config, criterion, random)
 
       val bestSplit = sampledFeatures.flatMap { fIdx =>
-        val featureValues = indices.map(i => x(i, fIdx))
-        val uniqueValues = featureValues.distinct.sorted
+        val sortedIndices = indices.sortBy(i => x(i, fIdx))
+        val sortedValues = sortedIndices.map(i => x(i, fIdx))
 
-        uniqueValues.flatMap { threshold =>
-          val (leftIdx, rightIdx) = indices.partition(i => x(i, fIdx) <= threshold)
+        (0 until sortedIndices.length - 1).collect {
+          case i if sortedValues(i) != sortedValues(i + 1) =>
+            val threshold = (sortedValues(i) + sortedValues(i + 1)) / 2.0
+            val leftIdx = sortedIndices.slice(0, i + 1)
+            val rightIdx = sortedIndices.slice(i + 1, sortedIndices.length)
 
-          if (leftIdx.nonEmpty && rightIdx.nonEmpty) {
-            val leftLabels = leftIdx.map(i => y(i))
-            val rightLabels = rightIdx.map(i => y(i))
+            val leftLabels = leftIdx.map(idx => y(idx))
+            val rightLabels = rightIdx.map(idx => y(idx))
 
             val weightLeft = leftLabels.length.toDouble / numSamples
             val weightRight = rightLabels.length.toDouble / numSamples
 
             val gain = currentImpurity - (weightLeft * criterion.computeImpurity(leftLabels) +
                                           weightRight * criterion.computeImpurity(rightLabels))
-            Some(Split(gain, fIdx, threshold, leftIdx, rightIdx))
-          } else None
+            Split(gain, fIdx, threshold, leftIdx, rightIdx)
         }
       }
+
       val bestSplitOption = if (bestSplit.isEmpty) None else Some(bestSplit.maxBy(_.gain))
 
       bestSplitOption match {

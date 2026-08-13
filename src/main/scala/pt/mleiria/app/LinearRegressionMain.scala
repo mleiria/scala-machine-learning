@@ -1,7 +1,6 @@
-package pt.mleiria
+package pt.mleiria.app
 
 import breeze.linalg.{DenseMatrix, DenseVector}
-
 import pt.mleiria.core.GradientDescent
 import pt.mleiria.core.GradientDescent.OptimizationResult
 import pt.mleiria.dto.PlotDto

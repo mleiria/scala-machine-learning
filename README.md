@@ -1,8 +1,4 @@
-agy --conversation=67feab92-ff6c-45a5-ac36-7a5fcf322dc8
-
-
-
-# Scala Machine Learning Project
+iket
 
 This project implements various machine learning algorithms from scratch using the `breeze` linear algebra library in Scala.
 

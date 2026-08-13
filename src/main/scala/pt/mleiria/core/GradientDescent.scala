@@ -2,8 +2,6 @@ package pt.mleiria.core
 
 import breeze.linalg.{DenseMatrix, DenseVector}
 
-import scala.collection.mutable.ArrayBuffer
-
 /**
  * Implementation of the Gradient Descent algorithm for Linear Regression.
  *
@@ -45,6 +43,15 @@ object GradientDescent {
 
   /**
    * Performs gradient descent using default cost and gradient implementations.
+   *
+   * This is a convenience wrapper that uses Linear Regression's Mean Squared Error (MSE)
+   * cost function and its corresponding gradient.
+   *
+   * @param trainingSet The dataset containing the feature matrix (X) and target vector (y).
+   * @param initW       Initial weights vector.
+   * @param initB       Initial bias value.
+   * @param params      Hyperparameters including learning rate (alpha) and number of iterations.
+   * @return An [[OptimizationResult]] containing the optimized weights, bias, and history.
    */
   def run(trainingSet: TrainingSet,
           initW: DenseVector[Double],
@@ -56,13 +63,17 @@ object GradientDescent {
   /**
    * Performs gradient descent with customizable cost and gradient functions.
    *
-   * @param trainingSet The dataset containing x and y vectors.
+   * This implementation uses a functional, tail-recursive approach to iteratively minimize
+   * the cost function. In each iteration, it calculates the gradient of the cost function
+   * and updates the parameters in the opposite direction of the gradient.
+   *
+   * @param trainingSet The dataset containing the feature matrix (X) and target vector (y).
    * @param initW       Initial weight vector.
    * @param initB       Initial bias value.
    * @param params      Optimization hyperparameters.
-   * @param costFunc    Function to calculate the cost J(w, b).
-   * @param gradFunc    Function to calculate the partial derivatives dJ/dw and dJ/db.
-   * @return OptimizationResult containing final parameters and history.
+   * @param costFunc    A function to calculate the cost J(w, b).
+   * @param gradFunc    A function to calculate the partial derivatives dJ/dw and dJ/db.
+   * @return An [[OptimizationResult]] containing final parameters and the history of cost and parameters.
    */
   def run(trainingSet: TrainingSet,
           initW: DenseVector[Double],
@@ -71,27 +82,26 @@ object GradientDescent {
           costFunc: CostFunc,
           gradFunc: GradFunc): OptimizationResult = {
 
-    val jHistory = new ArrayBuffer[Double](params.iterations)
-    val pHistory = new ArrayBuffer[(DenseVector[Double], Double)](params.iterations)
-    var b = initB
-    var w = initW.copy
+    @scala.annotation.tailrec
+    def loop(iter: Int, w: DenseVector[Double], b: Double, jHist: Vector[Double], pHist: Vector[(DenseVector[Double], Double)]): OptimizationResult = {
+      if (iter >= params.iterations) {
+        OptimizationResult(w, b, jHist.toArray, pHist.toArray)
+      } else {
+        val (dJdw, dJdb) = gradFunc(trainingSet.x, trainingSet.y, w, b)
 
-    for (i <- 0 until params.iterations) {
-      val (dJdw, dJdb) = gradFunc(trainingSet.x, trainingSet.y, w, b)
+        val nextW = w - (dJdw * params.alpha)
+        val nextB = b - params.alpha * dJdb
 
-      // Simultaneous update of w and b
-      w = w - (dJdw * params.alpha)
-      b = b - params.alpha * dJdb
+        val currentCost = costFunc(trainingSet.x, trainingSet.y, nextW, nextB)
 
-      // Record history
-      val currentCost = costFunc(trainingSet.x, trainingSet.y, w, b)
-      jHistory += currentCost
-      pHistory += (w.copy -> b)
+        if (iter % math.max(1, params.iterations / 10) == 0) {
+          println(f"Iteration $iter%5d: Cost $currentCost%.4e")
+        }
 
-      if (i % math.max(1, params.iterations / 10) == 0) {
-        println(f"Iteration $i%5d: Cost $currentCost%.4e")
+        loop(iter + 1, nextW, nextB, jHist :+ currentCost, pHist :+ (nextW -> nextB))
       }
     }
-    OptimizationResult(w, b, jHistory.toArray, pHistory.toArray)
+
+    loop(0, initW.copy, initB, Vector.empty, Vector.empty)
   }
 }

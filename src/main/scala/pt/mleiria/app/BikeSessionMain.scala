@@ -1,4 +1,4 @@
-package pt
+package pt.mleiria.app
 
 import org.apache.spark.sql.SparkSession
 import pt.io.BikeSessionExtractor

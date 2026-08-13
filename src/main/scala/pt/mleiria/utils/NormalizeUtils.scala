@@ -63,4 +63,17 @@ object NormalizeUtils {
   def tanh(z: DenseVector[Double]): DenseVector[Double] = {
     z.map(Math.tanh)
   }
+
+  /**
+   * Calculates the median of a DenseVector.
+   */
+  def calculateMedian(v: DenseVector[Double]): Double = {
+    val sorted = v.toArray.sorted
+    val mid = sorted.length / 2
+    if (sorted.length % 2 == 0) {
+      (sorted(mid - 1) + sorted(mid)) / 2.0
+    } else {
+      sorted(mid)
+    }
+  }
 }

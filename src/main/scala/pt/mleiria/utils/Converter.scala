@@ -161,9 +161,9 @@ object Converter extends Serializable {
     (newColumnConfig, matrix)
   }
 
-  def strArrayToBreeze(dataLines: Array[String], dropCol: Boolean): DenseMatrix[Double] = {
+  def strArrayToBreeze(dataLines: Array[String], dropFirstCol: Boolean): DenseMatrix[Double] = {
     val parsedData = dataLines.map { line =>
-      splitter(line, dropCol = dropCol).map(cell => convertToDouble(cell))
+      splitter(line, dropFirstCol = dropFirstCol).map(cell => convertToDouble(cell))
     }
     val nSamples = parsedData.length
     if (nSamples == 0) return DenseMatrix.zeros[Double](0, 0)
@@ -172,12 +172,12 @@ object Converter extends Serializable {
   }
 
   def strArrayToBreeze(dataLines: Array[String]): DenseMatrix[Double] = {
-    strArrayToBreeze(dataLines, dropCol = false)
+    strArrayToBreeze(dataLines, dropFirstCol = false)
   }
 
 
-  def splitter(line: String, dropCol: Boolean): Array[String] = {
-    if (dropCol) line.split(",").drop(1) else line.split(",")
+  def splitter(line: String, dropFirstCol: Boolean): Array[String] = {
+    if (dropFirstCol) line.split(",").drop(1) else line.split(",")
   }
 
   private def convertToDouble(cell: String): Double = {

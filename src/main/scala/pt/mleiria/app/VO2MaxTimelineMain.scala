@@ -1,9 +1,8 @@
-package pt
+package pt.mleiria.app
 
-import org.apache.spark.sql.SparkSession
-import pt.models.SamsungHealthModels.Exercise
-import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.{Encoders, SparkSession}
 import pt.mleiria.utils.FilterUtils
+import pt.models.SamsungHealthModels.Exercise
 
 
 object VO2MaxTimelineMain extends App {
